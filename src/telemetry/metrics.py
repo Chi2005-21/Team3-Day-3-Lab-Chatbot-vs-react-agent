@@ -6,8 +6,32 @@ class PerformanceTracker:
     """
     Tracking industry-standard metrics for LLMs.
     """
+    # Per-1K-token pricing table (prompt + completion averaged)
+    # Sources (approximate, as of mid-2025):
+    #   GPT-4o          : $0.005 / 1K tokens (blended)
+    #   GPT-4o-mini     : $0.00015 / 1K tokens
+    #   GPT-3.5-turbo   : $0.0005 / 1K tokens
+    #   gemini-1.5-flash: $0.000075 / 1K tokens
+    #   gemini-1.5-pro  : $0.00175 / 1K tokens
+    #   gemini-2.0-flash: $0.0001 / 1K tokens (estimated)
+    PRICING: Dict[str, float] = {
+        "gpt-4o":              0.005,
+        "gpt-4o-mini":         0.00015,
+        "gpt-3.5-turbo":       0.0005,
+        "gemini-1.5-flash":    0.000075,
+        "gemini-1.5-pro":      0.00175,
+        "gemini-2.0-flash":    0.0001,
+        "gemini-2.0-flash-exp":0.0001,
+    }
+
     def __init__(self):
         self.session_metrics = []
+
+    def get_supported_models(self) -> List[str]:
+        """
+        Returns a list of supported model keys from the metrics configuration.
+        """
+        return list(self.PRICING.keys())
 
     def track_request(self, provider: str, model: str, usage: Dict[str, int], latency_ms: int):
         """
@@ -29,31 +53,12 @@ class PerformanceTracker:
         """
         Estimate API cost based on real-world per-token pricing.
         Prices are per 1 000 tokens (input + output combined for simplicity).
-
-        Sources (approximate, as of mid-2025):
-          GPT-4o          : $0.005 / 1K tokens (blended)
-          GPT-4o-mini     : $0.00015 / 1K tokens
-          GPT-3.5-turbo   : $0.0005 / 1K tokens
-          gemini-1.5-flash: $0.000075 / 1K tokens
-          gemini-1.5-pro  : $0.00175 / 1K tokens
-          gemini-2.0-flash: $0.0001 / 1K tokens (estimated)
         """
-        # Per-1K-token pricing table (prompt + completion averaged)
-        PRICING: Dict[str, float] = {
-            "gpt-4o":              0.005,
-            "gpt-4o-mini":         0.00015,
-            "gpt-3.5-turbo":       0.0005,
-            "gemini-1.5-flash":    0.000075,
-            "gemini-1.5-pro":      0.00175,
-            "gemini-2.0-flash":    0.0001,
-            "gemini-2.0-flash-exp":0.0001,
-        }
-
         # Match model name (case-insensitive, partial prefix match)
         model_lower = model.lower()
         price_per_1k = 0.001  # default fallback
-        for key, price in PRICING.items():
-            if model_lower.startswith(key):
+        for key, price in self.PRICING.items():
+            if model_lower.startswith(key) or key in model_lower:
                 price_per_1k = price
                 break
 

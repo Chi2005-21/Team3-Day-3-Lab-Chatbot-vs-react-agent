@@ -19,6 +19,14 @@ class GeminiProvider(LLMProvider):
         elif model_name and not model_name.startswith("google/") and "/" not in model_name:
             model_name = f"google/{model_name}"
 
+        # Validate/suggest model options from metrics.py
+        from src.telemetry.metrics import tracker
+        supported = tracker.get_supported_models()
+        clean_model = model_name.split("/")[-1]
+        if clean_model not in supported and model_name not in supported:
+            print(f"[*] [GeminiProvider] Note: model '{model_name}' is not listed in metrics.py pricing tables.")
+            print(f"    Available options in metrics.py: {supported}")
+
         super().__init__(model_name, api_key)
         self.client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
@@ -53,6 +61,15 @@ class GeminiProvider(LLMProvider):
             "completion_tokens": completion_tokens,
             "total_tokens": total_tokens
         }
+
+        # Track Request telemetry metrics
+        from src.telemetry.metrics import tracker
+        tracker.track_request(
+            provider="gemini-openrouter",
+            model=self.model_name,
+            usage=usage,
+            latency_ms=latency_ms
+        )
 
         return {
             "content": content,

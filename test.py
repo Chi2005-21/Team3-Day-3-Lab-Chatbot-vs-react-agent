@@ -1,4 +1,8 @@
 import os
+api_key = os.getenv("OPENAI_ROUTER") or os.getenv("GEMINI_API_KEY")
+print(api_key)
+
+import os
 import time
 from typing import Dict, Any, List, Optional, Generator
 from openai import OpenAI
@@ -8,16 +12,6 @@ class OpenAIProvider(LLMProvider):
     def __init__(self, model_name: str = "gpt-4o", api_key: Optional[str] = None):
         if not api_key:
             api_key = os.getenv("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
-        
-        # Validate/suggest model options from metrics.py
-        from src.telemetry.metrics import tracker
-        supported = tracker.get_supported_models()
-        # Strip vendor prefix if checking
-        clean_model = model_name.split("/")[-1]
-        if clean_model not in supported and model_name not in supported:
-            print(f"[*] [OpenAIProvider] Note: model '{model_name}' is not listed in metrics.py pricing tables.")
-            print(f"    Available options in metrics.py: {supported}")
-            
         super().__init__(model_name, api_key)
         self.client = OpenAI(api_key=self.api_key)
 
@@ -45,15 +39,6 @@ class OpenAIProvider(LLMProvider):
             "completion_tokens": response.usage.completion_tokens,
             "total_tokens": response.usage.total_tokens
         }
-
-        # Track Request telemetry metrics
-        from src.telemetry.metrics import tracker
-        tracker.track_request(
-            provider="openai",
-            model=self.model_name,
-            usage=usage,
-            latency_ms=latency_ms
-        )
 
         return {
             "content": content,

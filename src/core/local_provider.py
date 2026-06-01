@@ -65,6 +65,15 @@ class LocalProvider(LLMProvider):
             "total_tokens": response["usage"]["total_tokens"]
         }
 
+        # Track Request telemetry metrics
+        from src.telemetry.metrics import tracker
+        tracker.track_request(
+            provider="local",
+            model=self.model_name,
+            usage=usage,
+            latency_ms=latency_ms
+        )
+
         return {
             "content": content,
             "usage": usage,
