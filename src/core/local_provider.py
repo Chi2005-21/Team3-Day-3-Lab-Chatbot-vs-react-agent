@@ -1,7 +1,12 @@
 import time
 import os
 from typing import Dict, Any, Optional, Generator
-from llama_cpp import Llama
+try:
+    from llama_cpp import Llama
+    HAS_LLAMA_CPP = True
+except ImportError:
+    HAS_LLAMA_CPP = False
+
 from src.core.llm_provider import LLMProvider
 
 class LocalProvider(LLMProvider):
@@ -19,6 +24,9 @@ class LocalProvider(LLMProvider):
         """
         super().__init__(model_name=os.path.basename(model_path))
         
+        if not HAS_LLAMA_CPP:
+            raise ImportError("llama-cpp-python is not installed. Local CPU GGUF models are unavailable.")
+            
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Model file not found at {model_path}. Please download it first.")
 
