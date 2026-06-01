@@ -1,56 +1,149 @@
-# Lab 3: Chatbot vs ReAct Agent (Industry Edition)
+# ReAct Flight Agent Assistant (Industry Edition)
 
-Welcome to Phase 3 of the Agentic AI course! This lab focuses on moving from a simple LLM Chatbot to a sophisticated **ReAct Agent** with industry-standard monitoring.
-
-## 🚀 Getting Started
-
-### 1. Setup Environment
-Copy the `.env.example` to `.env` and fill in your API keys:
-```bash
-cp .env.example .env
-```
-
-### 2. Install Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Directory Structure
-- `src/tools/`: Extension point for your custom tools.
-
-## 🏠 Running with Local Models (CPU)
-
-If you don't want to use OpenAI or Gemini, you can run open-source models (like Phi-3) directly on your CPU using `llama-cpp-python`.
-
-### 1. Download the Model
-Download the **Phi-3-mini-4k-instruct-q4.gguf** (approx 2.2GB) from Hugging Face:
-- [Phi-3-mini-4k-instruct-GGUF](https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf)
-- Direct Download: [phi-3-mini-4k-instruct-q4.gguf](https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf/resolve/main/Phi-3-mini-4k-instruct-q4.gguf)
-
-### 2. Place Model in Project
-Create a `models/` folder in the root and move the downloaded `.gguf` file there.
-
-### 3. Update `.env`
-Change your `DEFAULT_PROVIDER` and set the path:
-```env
-DEFAULT_PROVIDER=local
-LOCAL_MODEL_PATH=./models/Phi-3-mini-4k-instruct-q4.gguf
-```
-
-## 🎯 Lab Objectives
-
-1.  **Baseline Chatbot**: Observe the limitations of a standard LLM when faced with multi-step reasoning.
-2.  **ReAct Loop**: Implement the `Thought-Action-Observation` cycle in `src/agent/agent.py`.
-3.  **Provider Switching**: Swap between OpenAI and Gemini seamlessly using the `LLMProvider` interface.
-4.  **Failure Analysis**: Use the structured logs in `logs/` to identify why the agent fails (hallucinations, parsing errors).
-5.  **Grading & Bonus**: Follow the [SCORING.md](file:///Users/tindt/personal/ai-thuc-chien/day03-lab-agent/SCORING.md) to maximize your points and explore bonus metrics.
-
-## 🛠️ How to Use This Baseline
-The code is designed as a **Production Prototype**. It includes:
-- **Telemetry**: Every action is logged in JSON format for later analysis.
-- **Robust Provider Pattern**: Easily extendable to any LLM API.
-- **Clean Skeletons**: Focus on the logic that matters—the agent's reasoning process.
+Welcome to the **Flight Agent Assistant** repository! This project implements a fully autonomous **ReAct (Reasoning and Action)** agent designed to solve complex multi-step travel queries (comfort scoring, routing auditing, and countdown timing) using SerpAPI Google Flights and local flight search databases.
 
 ---
 
-*Happy Coding! Let's build agents that actually work.*
+## 🛠️ Specialized Flight Agent Tools
+
+The assistant utilizes 4 custom-engineered tools located in `src/tools/flight_tools.py`:
+1. **`find_productivity_flights()`**: Scans flight segment details (Wi-Fi, USB power, legroom comfort) and calculates a **Productivity Score** to find comfort-optimized flights for digital nomads.
+2. **`time_until_flight()`**: Computes a live countdown or elapsed time remaining until a flight departs.
+3. **`parse_flight_details()`**: Extracts deep, segment-by-segment itinerary facts, layover details, baggage rules, cancellation terms, and carbon footprint.
+4. **`get_current_time()`**: Fetches system time in `YYYY-MM-DD HH:MM` format so the agent has live clock awareness.
+
+---
+
+## ⚙️ Environment Setup
+
+1. **Configure Environment Variables**:
+   Copy `.env.example` to `.env` and fill in your credentials:
+   ```env
+   # API Keys
+   OPENAI_API_KEY=your_openai_api_key_here
+   GEMINI_API_KEY=your_gemini_api_key_here
+   
+   # Local GGUF Configuration
+   LOCAL_MODEL_PATH=./models/Phi-3-mini-4k-instruct-q4.gguf
+   ```
+
+2. **API Model Fallback Plan**:
+   The engine automatically initializes a robust **Fallback Provider Chain**: `OpenAI -> Gemini -> Local`.
+   - If OpenAI rate limits or key exceptions occur, it seamlessly falls back to Gemini.
+   - If both fail, it falls back to your Local CPU model.
+   - Wraps local compilation packages gracefully—ensuring the chain works even if `llama-cpp-python` is not compiled on your system.
+
+---
+
+## 🧪 Running & Verifying the System
+
+### 1. Test Tools in Isolation
+Verify that your database parsing, countdown mathematics, and SerpAPI interfaces operate with 100% correctness:
+```bash
+python src/tools/flight_tools.py
+```
+
+### 2. Test Agent Loop (High-Fidelity Mock Simulation)
+Validate the ReAct parser, history tracking, tool calling, and termination conditions without consuming API keys:
+```bash
+python tests/test_agent_mock.py
+```
+
+### 3. Test Agent Loop (Live OpenAI GPT-4o Run)
+Run the complete end-to-end live reasoning sequence with your system API keys:
+```bash
+# In PowerShell (Windows)
+$env:OPENAI_API_KEY="your-active-api-key"; python tests/test_agent.py
+
+# In Bash (Mac/Linux)
+export OPENAI_API_KEY="your-active-api-key" && python tests/test_agent.py
+```
+
+### 4. Run the Streamlit Web Dashboard (Interactive UI)
+Launch a premium, custom-styled travel agent web simulator to click pre-defined use case prompts, config models, and watch intermediate Thoughts, Actions, and tool Observations rendered live:
+```bash
+streamlit run app.py
+```
+
+---
+
+## 📊 Live Verification Output Preview
+
+Below is the actual, verified output from a live end-to-end test session using **GPT-4o**, demonstrating **autonomous self-correction** and multi-step reasoning:
+
+```text
+=== Initializing Fallback LLM Provider ===
+[*] [FallbackChain] OpenAIProvider registered.
+Fallback Provider chain built successfully. Initial model: fallback-chain
+
+=== Initializing ReAct Agent ===
+
+User Query: Find the top productivity-friendly flight options from CDG to AUS. Also, retrieve the complete itinerary details for flight 'BA 191', and calculate how much time is left before flight 'BA 303' departs if the current reference time is '2026-03-03 08:30'.
+
+--- Running Agentic Loop ---
+[*] [FallbackChain] Attempting generate() with provider: OpenAIProvider
+
+Thought: To find the top productivity-friendly flight options from CDG to AUS, I will start by using the "find_productivity_flights" tool. Then, I will retrieve the complete itinerary details for flight 'BA 191' using the "parse_flight_details" tool. Finally, I'll calculate the remaining time before flight 'BA 303' departs if the current reference time is '2026-03-03 08:30'. 
+
+Action: find_productivity_flights(from='CDG', to='AUS')
+Observation: Error executing tool 'find_productivity_flights' with args 'from='CDG', to='AUS'': find_productivity_flights() got an unexpected keyword argument 'from'
+[*] [FallbackChain] Attempting generate() with provider: OpenAIProvider
+
+Thought: It seems there was an error with the argument naming. I will try using positional arguments instead of keyword arguments for the "find_productivity_flights" tool.
+
+Action: find_productivity_flights('CDG', 'AUS')
+Observation: Error executing tool 'find_productivity_flights' with args ''CDG', 'AUS'': find_productivity_flights() takes from 0 to 1 positional arguments but 2 were given
+[*] [FallbackChain] Attempting generate() with provider: OpenAIProvider
+
+Thought: The "find_productivity_flights" tool might not require specific from and to parameters, and might instead provide options from a set route database. I will call it without any arguments.
+
+Action: find_productivity_flights()
+Observation: [
+  {
+    "airline": "Delta",
+    "price_usd": 1588,
+    "total_duration_mins": 942,
+    "productivity_score": 250,
+    "segments": [
+      { "flight_number": "DL 83", "wifi": "Free", "power": true, "legroom_inch": 31 }
+    ]
+  },
+  ...
+]
+[*] [FallbackChain] Attempting generate() with provider: OpenAIProvider
+
+Thought: I have found the top productivity-friendly flight options from CDG to AUS. Next, I will retrieve the complete itinerary details for flight 'BA 191' using the "parse_flight_details" tool.
+
+Action: parse_flight_details('BA 191')
+Observation: {
+  "airline": "British Airways",
+  "total_duration_mins": 820,
+  "price_usd": 520,
+  "flight_legs": [
+    { "flight_number": "BA 301", "departure": "CDG", "arrival": "LHR" },
+    { "flight_number": "BA 191", "departure": "LHR", "arrival": "AUS", "airplane": "Airbus A350" }
+  ]
+}
+[*] [FallbackChain] Attempting generate() with provider: OpenAIProvider
+
+Thought: I have retrieved the complete itinerary details for flight 'BA 191'. Now, I will calculate how much time is left before flight 'BA 303' departs if the current reference time is '2026-03-03 08:30'.
+
+Action: time_until_flight('BA 303', '2026-03-03 08:30')
+Observation: Flight BA 303 departing from Paris Charles de Gaulle Airport (CDG) is in 3 hours and 25 minutes (Scheduled: 2026-03-03 11:55, Current reference: 2026-03-03 08:30).
+[*] [FallbackChain] Attempting generate() with provider: OpenAIProvider
+
+Thought: I have gathered all the necessary information to respond to the user's request.
+
+Final Answer: 
+1. **Top Productivity-Friendly Flights (CDG -> AUS):**
+   - Delta Airlines (Price: $1588, Score: 250/100, Free Wi-Fi, in-seat power)
+   - Air France / Delta (Price: $1589, Score: 235/100)
+2. **Itinerary Details for BA 191:**
+   - Two legs: BA 301 (CDG -> LHR) & BA 191 (LHR -> AUS, Airbus A350, power outlets, Wi-Fi)
+   - Baggage: Checked bag for a fee | Cancellations: Fully refundable
+3. **Flight Countdown (BA 303):**
+   - Scheduled: 2026-03-03 11:55 AM. Time left relative to reference: **3 hours and 25 minutes**.
+
+================ FINAL AGENT ANSWER ================
+[Success Response displayed above]
+```
