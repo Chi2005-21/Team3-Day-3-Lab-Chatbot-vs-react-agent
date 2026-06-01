@@ -1,6 +1,5 @@
 import json
 import os
-import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -239,9 +238,6 @@ def _load_flights_from_mock(params: FlightSearchParams) -> List[FlightResult]:
 # Public API — giữ nguyên signature để không phá vỡ các caller hiện có
 # ---------------------------------------------------------------------------
 
-# Các giá trị hợp lệ cho sort_by
-_VALID_SORT_BY = {"price", "airline", "departure_time", "duration_minutes"}
-
 
 def search_flights(
     departure_airport: str,
@@ -251,27 +247,11 @@ def search_flights(
     passengers: int = 1,
     travel_class: str = "economy",
     currency: str = "USD",
-    sort_by: str = "price",
 ) -> Dict[str, Any]:
     """
     Tìm kiếm chuyến bay từ mock data (data.json).
     Không gọi bất kỳ API bên ngoài nào.
-
-    Args:
-        sort_by: Sắp xếp kết quả theo tiêu chí.
-                 Các giá trị hợp lệ:
-                   - "price"           — giá tăng dần (mặc định)
-                   - "airline"         — tên hãng A→Z
-                   - "departure_time"  — giờ cất cánh sớm nhất
-                   - "duration_minutes"— thời gian bay ngắn nhất
     """
-    # --- Validate sort_by ---
-    sort_by = sort_by.strip().lower()
-    if sort_by not in _VALID_SORT_BY:
-        raise FlightSearchException(
-            f"sort_by không hợp lệ: '{sort_by}'. Chọn một trong: {', '.join(sorted(_VALID_SORT_BY))}"
-        )
-
     # --- Validate params ---
     try:
         params = FlightSearchParams(
@@ -297,24 +277,6 @@ def search_flights(
     # --- Load từ mock data ---
     flights = _load_flights_from_mock(params)
 
-    # --- Sort ---
-    if sort_by == "price":
-        flights.sort(key=lambda f: f.price)
-    elif sort_by == "airline":
-        flights.sort(key=lambda f: f.airline.lower())
-    elif sort_by == "departure_time":
-        flights.sort(key=lambda f: f.departure_time)
-    elif sort_by == "duration_minutes":
-        # _MOCK_DATA lưu total_duration theo phút; parse lại từ chuỗi "Xh Ym"
-        def _parse_duration(s: str) -> int:
-            h = m = 0
-            hm = re.match(r"(\d+)h(?:\s*(\d+)m)?", s)
-            if hm:
-                h = int(hm.group(1))
-                m = int(hm.group(2) or 0)
-            return h * 60 + m
-        flights.sort(key=lambda f: _parse_duration(f.duration))
-
     if not flights:
         return {
             "status": "success",
@@ -324,17 +286,10 @@ def search_flights(
             "flights": [],
         }
 
-    sort_label = {
-        "price": "giá tăng dần",
-        "airline": "tên hãng A→Z",
-        "departure_time": "giờ khởi hành sớm nhất",
-        "duration_minutes": "thời gian bay ngắn nhất",
-    }[sort_by]
-
     return {
         "status": "success",
         "count": len(flights),
-        "message": f"Tìm thấy {len(flights)} chuyến bay, sắp xếp theo {sort_label}.",
-        "query": {**params.model_dump(), "sort_by": sort_by},
+        "message": f"Tìm thấy {len(flights)} chuyến bay.",
+        "query": params.model_dump(),
         "flights": [flight.model_dump() for flight in flights],
     }
