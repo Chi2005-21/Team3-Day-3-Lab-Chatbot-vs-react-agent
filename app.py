@@ -10,6 +10,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from src.core.llm_provider import get_fallback_provider, LLMProvider
 from src.agent.agent import ReActAgent
+from src.telemetry.metrics import tracker
 
 # ----------------- AESTHETICS & CUSTOM CSS -----------------
 st.set_page_config(
@@ -171,6 +172,56 @@ mode = st.sidebar.radio(
 
 max_steps_slider = st.sidebar.slider("Maximum ReAct Steps", 1, 15, 8)
 
+# 🧠 Model Customization
+st.sidebar.markdown('<h3>🧠 Model Customization</h3>', unsafe_allow_html=True)
+
+# Dynamically retrieve supported models from metrics tracker
+supported_models = tracker.get_supported_models()
+openai_options = [m for m in supported_models if "gpt" in m] + ["Custom Model..."]
+gemini_options = [f"google/{m}" if not m.startswith("google/") else m for m in supported_models if "gemini" in m] + ["Custom Model..."]
+
+# Ensure default values are in the lists, or prepend/append them
+if "gpt-4o" not in openai_options:
+    openai_options.insert(0, "gpt-4o")
+if "google/gemini-3.1-flash-lite" not in gemini_options:
+    gemini_options.insert(0, "google/gemini-3.1-flash-lite")
+if "google/gemini-2.5-flash" not in gemini_options:
+    gemini_options.insert(1, "google/gemini-2.5-flash")
+
+# OpenAI Selectbox
+openai_selection = st.sidebar.selectbox(
+    "OpenAI Model",
+    options=openai_options,
+    index=openai_options.index("gpt-4o") if "gpt-4o" in openai_options else 0,
+    help="Select a supported OpenAI model from metrics.py or choose Custom Model..."
+)
+
+if openai_selection == "Custom Model...":
+    openai_model_input = st.sidebar.text_input(
+        "Custom OpenAI Model Name",
+        value="gpt-4o",
+        help="Specify any valid OpenAI model name."
+    )
+else:
+    openai_model_input = openai_selection
+
+# Gemini / OpenRouter Selectbox
+gemini_selection = st.sidebar.selectbox(
+    "Gemini / OpenRouter Model",
+    options=gemini_options,
+    index=gemini_options.index("google/gemini-3.1-flash-lite") if "google/gemini-3.1-flash-lite" in gemini_options else 0,
+    help="Select a supported Gemini/OpenRouter model from metrics.py (e.g. google/gemini-3.1-flash-lite) or choose Custom Model..."
+)
+
+if gemini_selection == "Custom Model...":
+    gemini_model_input = st.sidebar.text_input(
+        "Custom Gemini/OpenRouter Model Name",
+        value="google/gemini-3.1-flash-lite",
+        help="Specify any valid OpenRouter model name (e.g., google/gemini-3.1-flash-lite)."
+    )
+else:
+    gemini_model_input = gemini_selection
+
 # Sync API Keys to Env if edited
 if api_key_input:
     os.environ["OPENAI_API_KEY"] = api_key_input
@@ -293,7 +344,10 @@ if st.button("🚀 Run Agentic ReAct Loop", type="primary"):
         if "Live Fallback" in mode:
             with st.spinner("Initializing Fallback LLM Provider (OpenAI -> Gemini -> Local)..."):
                 try:
-                    llm = get_fallback_provider()
+                    llm = get_fallback_provider(
+                        openai_model=openai_model_input,
+                        gemini_model=gemini_model_input
+                    )
                 except Exception as e:
                     st.error(f"Failed to initialize live provider: {e}. Falling back to Mock mode automatically.")
                     llm = DemoMockLLMProvider()

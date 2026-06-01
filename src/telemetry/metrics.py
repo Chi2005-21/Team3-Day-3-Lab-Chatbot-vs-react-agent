@@ -22,6 +22,8 @@ class PerformanceTracker:
         "gemini-1.5-pro":      0.00175,
         "gemini-2.0-flash":    0.0001,
         "gemini-2.0-flash-exp":0.0001,
+        "gemini-2.5-flash":    0.000075,
+        "gemini-3.1-flash-lite":0.000075,
     }
 
     def __init__(self):
