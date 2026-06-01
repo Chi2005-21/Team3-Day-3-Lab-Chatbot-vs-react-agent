@@ -187,6 +187,46 @@ st.sidebar.markdown(f"**OpenAI (GPT-4o)**: {openai_status}")
 st.sidebar.markdown(f"**OpenRouter (Gemini)**: {openrouter_status}")
 st.sidebar.markdown(f"**Local Model**: {local_status}")
 
+# 🛠️ Agent Skills
+st.sidebar.markdown('<h3>🛠️ Agent Skills</h3>', unsafe_allow_html=True)
+st.sidebar.markdown("""
+* 💻 **Comfort Finder**: Wi-Fi, power, and legroom scoring
+* ⏳ **Departure Countdown**: Duration remaining scheduling
+* 💼 **Segment Parser**: Price, carbon footprint, legroom audits
+* 🕒 **Clock Sync**: Real-time reference timing calculations
+""")
+
+# 🤖 Agent System Prompt
+st.sidebar.markdown('<h3>🤖 Agent System Prompt</h3>', unsafe_allow_html=True)
+default_prompt = """You are an intelligent travel assistant. You must answer the user request by calling the appropriate tools.
+You have access to the following tools:
+- find_productivity_flights: Scores and ranks flight routes from the database based on comforts.
+- time_until_flight: Calculates the duration remaining until a specific flight departs. Usage: time_until_flight(flight_number, current_time_str)
+- parse_flight_details: Parses segment-by-segment itinerary, layover details, carbon footprint, and pricing. Usage: parse_flight_details(flight_number)
+- get_current_time: Returns the current local date and time of the system.
+
+Use the following exact format:
+Thought: your line of reasoning about what you need to do next.
+Action: tool_name(arguments)
+Observation: the result returned by the tool.
+
+... (repeat Thought, Action, Observation as many times as needed to resolve the request)
+
+Thought: I have solved the request.
+Final Answer: your final response to the user.
+
+Ensure that:
+1. Every time you want to execute a tool, write "Action: tool_name(arguments)" followed by a newline and nothing else.
+2. Every time you write an "Action", you must STOP and wait for the "Observation:".
+3. Write "Final Answer:" when you are finished and have the final resolution."""
+
+system_prompt_input = st.sidebar.text_area(
+    "Custom Reasoning Prompt:",
+    value=default_prompt,
+    height=250,
+    help="You can customize the ReAct agent's core instructions here!"
+)
+
 st.markdown('<div class="glass-card"><h3>📚 Traveler Use Cases</h3><p>Choose an interactive travel planning use case below. Clicking a button will automatically populate the query input field with a optimized pre-defined prompt.</p></div>', unsafe_allow_html=True)
 
 # Tabs for Use Cases
@@ -262,6 +302,8 @@ if st.button("🚀 Run Agentic ReAct Loop", type="primary"):
 
         # 2. Build Agent
         agent = ReActAgent(llm=llm, tools=tools_metadata, max_steps=max_steps_slider)
+        # Override the agent's system prompt dynamically with the value from the sidebar!
+        agent.get_system_prompt = lambda: system_prompt_input
         
         st.markdown("### 🤖 Reasoning Execution Logs")
         
