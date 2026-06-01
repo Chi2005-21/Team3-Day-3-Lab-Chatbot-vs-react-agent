@@ -84,13 +84,22 @@ def build_chatbot() -> Chatbot:
 
 
 if __name__ == "__main__":
+    import sys
     bot = build_chatbot()
-    print("Flight Chatbot (type 'quit' to exit)\n")
-    while True:
-        user_input = input("You: ").strip()
-        if user_input.lower() in ("quit", "exit"):
-            break
-        if not user_input:
-            continue
-        response = bot.chat(user_input)
-        print(f"Bot: {response}\n")
+    
+    print("=" * 60)
+    print("            FLIGHT CHATBOT TERMINAL TESTER")
+    print("=" * 60)
+    
+    test_query = "Find the top productivity-friendly flight options from CDG to AUS."
+    print(f"[*] Test Question: '{test_query}'")
+    print("[*] Generating chatbot baseline response...")
+    print("-" * 60)
+    
+    try:
+        response = bot.chat(test_query)
+        print(f"Bot Answer:\n{response}")
+        print("=" * 60)
+    except Exception as e:
+        print(f"[ERROR] Chatbot execution failed: {e}")
+        print("=" * 60)

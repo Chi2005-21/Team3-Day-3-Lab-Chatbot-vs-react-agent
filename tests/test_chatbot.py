@@ -148,10 +148,17 @@ if __name__ == "__main__":
     print(f"Provider : {os.getenv('DEFAULT_PROVIDER', 'google')}")
     print(f"Model    : {os.getenv('DEFAULT_MODEL', 'gemini-1.5-flash')}")
 
-    if mode in ("simple", "all"):
-        run_simple_tests()
-    if mode in ("complex", "all"):
-        run_complex_tests()
+    if mode == "custom":
+        banner("CUSTOM RUNNER — traveler flight scoring query")
+        bot = build_chatbot()
+        run_test(bot,
+            label="Productivity Flight Query",
+            question="Find the top productivity-friendly flight options from CDG to AUS.")
+    else:
+        if mode in ("simple", "all"):
+            run_simple_tests()
+        if mode in ("complex", "all"):
+            run_complex_tests()
 
     print(f"{BOLD}{CYAN}{'='*60}{RESET}")
     print(f"{BOLD}Done.{RESET}  Check logs/ for full JSON telemetry.\n")
